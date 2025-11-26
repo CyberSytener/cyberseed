@@ -29,7 +29,7 @@ impl BackendManager {
         let python_cmd = python_path.unwrap_or_else(|| self.detect_python());
         
         // Build command to start backend
-        let backend_script = backend_dir.join("backend").join("app_v2.py");
+        let backend_script = backend_dir.join("app_v2.py");
         
         if !backend_script.exists() {
             return Err(format!("Backend script not found: {:?}", backend_script));
@@ -67,22 +67,66 @@ impl BackendManager {
 
     /// Auto-detect Python executable (embedded vs system)
     fn detect_python(&self) -> String {
-        // Try embedded Python first
+        // Determine platform-specific Python executable name
+        let python_exe = if cfg!(windows) { "python.exe" } else { "python3" };
+        
+        // Try embedded Python first (in resources folder)
         let embedded_python = std::env::current_exe()
             .ok()
-            .and_then(|exe| exe.parent().map(|p| p.join("python").join("python.exe")))
-            .filter(|p| p.exists());
+            .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
+            .and_then(|app_dir| {
+                // Check multiple possible locations for embedded Python
+                let locations = vec![
+                    app_dir.join("python").join(python_exe),
+                    app_dir.join("resources").join("python").join(python_exe),
+                    app_dir.join("..").join("Resources").join("python").join(python_exe),
+                ];
+                locations.into_iter().find(|p| p.exists())
+            });
 
         if let Some(python) = embedded_python {
             return python.to_string_lossy().to_string();
         }
 
-        // Fall back to system Python
+        // Try to find Python 3.11+ in system PATH
+        for cmd in &["python3.11", "python3.12", "python3.13", "python3", "python"] {
+            if let Ok(output) = std::process::Command::new(cmd)
+                .arg("--version")
+                .output()
+            {
+                if output.status.success() {
+                    let version_str = String::from_utf8_lossy(&output.stdout);
+                    // Parse version using regex-like matching: "Python X.Y.Z"
+                    // Check if version is 3.11 or higher
+                    if Self::is_python_311_or_higher(&version_str) {
+                        return cmd.to_string();
+                    }
+                }
+            }
+        }
+
+        // Fall back to generic python command
         if cfg!(windows) {
             "python".to_string()
         } else {
             "python3".to_string()
         }
+    }
+
+    /// Check if Python version string indicates 3.11 or higher
+    fn is_python_311_or_higher(version_str: &str) -> bool {
+        // Extract version from string like "Python 3.11.5" or "Python 3.12.0"
+        let version_str = version_str.trim();
+        if let Some(version_part) = version_str.strip_prefix("Python ") {
+            let parts: Vec<&str> = version_part.split('.').collect();
+            if parts.len() >= 2 {
+                if let (Ok(major), Ok(minor)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    // Require Python 3.11 or higher
+                    return major == 3 && minor >= 11;
+                }
+            }
+        }
+        false
     }
 
     /// Check if Python is available

@@ -36,7 +36,7 @@ class SecurityConfig(BaseModel):
     cors_allowed_origins: List[str] = Field(
         default_factory=lambda: os.getenv(
             "CORS_ALLOWED_ORIGINS",
-            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:1420,http://127.0.0.1:1420"
+            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:1420,http://127.0.0.1:1420,tauri://localhost,https://tauri.localhost"
         ).split(",")
     )
     
