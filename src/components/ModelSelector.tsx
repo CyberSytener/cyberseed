@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useModelStore, DEFAULT_MODEL_FALLBACK } from '../stores/modelStore';
 import { api } from '../lib/api';
-import type { ModelsResponse } from '../lib/models';
+import type { ModelsResponse, ModelConfig } from '../lib/models';
 
 export function ModelSelector() {
   const { selectedModel, setSelectedModel } = useModelStore();
@@ -36,7 +36,7 @@ export function ModelSelector() {
       onChange={(e) => setSelectedModel(e.target.value)}
       className="text-sm border rounded px-2 py-1 bg-white"
     >
-      {Object.entries(models.models).map(([id, config]) => (
+      {Object.entries(models.models).map(([id, config]: [string, ModelConfig]) => (
         <option key={id} value={id}>
           {config.description}
         </option>
