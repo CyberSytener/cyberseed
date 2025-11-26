@@ -31,6 +31,8 @@ from backend.core.exceptions import (
     raise_not_found,
     raise_bad_request
 )
+from backend.core.llm import run_inference
+from backend.core.llm.model_registry import list_models, DEFAULT_MODEL
 
 from backend.schemas_v2 import (
     HealthResponse,
@@ -50,7 +52,9 @@ from backend.schemas_v2 import (
     SystemStatus,
     LLMStatus,
     TranscriptionStatus,
-    RefreshTokenRequest
+    RefreshTokenRequest,
+    ModelsResponse,
+    ModelInfo
 )
 
 # Initialize logger
@@ -76,6 +80,42 @@ app.add_middleware(
 storage = ScopedStorage()
 
 logger.info(f"CyberSeed Backend starting in {security_config.environment} mode")
+
+
+# ==================
+# Helper Functions
+# ==================
+
+def sanitize_text(text: str, max_length: int = 50000) -> str:
+    """
+    Sanitize text to prevent prompt injection attacks and DoS via excessive input.
+    
+    Security measures:
+    - Limits text length to prevent Denial of Service attacks
+    - Removes null bytes that could cause parsing issues
+    - Normalizes whitespace while preserving text structure
+    
+    Args:
+        text: Input text to sanitize
+        max_length: Maximum allowed text length (default: 50000 characters)
+    
+    Returns:
+        Sanitized text safe for use in LLM prompts
+    """
+    if not text:
+        return ""
+    
+    # Limit length to prevent DoS
+    text = text[:max_length]
+    
+    # Remove null bytes
+    text = text.replace('\x00', '')
+    
+    # Remove excessive whitespace but preserve structure
+    lines = [line.strip() for line in text.split('\n')]
+    text = '\n'.join(line for line in lines if line)
+    
+    return text
 
 
 # ==================
@@ -385,6 +425,28 @@ async def delete_owner_data(
 # Core Endpoints
 # ==================
 
+@app.get("/models", response_model=ModelsResponse, tags=["Core"])
+async def get_models():
+    """Get list of available LLM models."""
+    models_dict = list_models()
+    
+    # Convert to ModelInfo objects
+    models_response = {}
+    for model_id, config in models_dict.items():
+        models_response[model_id] = ModelInfo(
+            provider=config["provider"],
+            model_name=config["model_name"],
+            max_tokens=config["max_tokens"],
+            temperature=config["temperature"],
+            description=config["description"]
+        )
+    
+    return ModelsResponse(
+        models=models_response,
+        default=DEFAULT_MODEL
+    )
+
+
 @app.post("/souls/{owner_id}/{soul_id}/transcribe", response_model=TranscribeResponse, tags=["Core"])
 async def transcribe_audio(
     owner_id: str,
@@ -506,18 +568,28 @@ async def chat(
                 top_k=request.top_k
             )
         
-        # Build context from documents
-        context = [doc.get("text", "") for doc in docs] if docs else None
+        # Build prompt with context from documents
+        # Sanitize user query to prevent prompt injection
+        sanitized_query = sanitize_text(request.query, max_length=10000)
         
-        # Generate response with LLM (placeholder in Phase 1)
-        response_text = await llm_runner.generate(
-            prompt=request.query,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            context=context
+        prompt = sanitized_query
+        if docs:
+            # Sanitize document text as well
+            sanitized_docs = [sanitize_text(doc.get('text', ''), max_length=5000) for doc in docs]
+            context_text = "\n\n".join([
+                f"Context {i+1}:\n{text}"
+                for i, text in enumerate(sanitized_docs) if text
+            ])
+            prompt = f"Context information:\n{context_text}\n\nQuestion: {sanitized_query}\n\nAnswer based on the context provided:"
+        
+        # Generate response with real LLM via run_inference
+        response_text = await run_inference(
+            prompt=prompt,
+            history=None,
+            model_id=request.model_id
         )
         
-        logger.info(f"Chat response generated for {owner_id}/{soul_id}")
+        logger.info(f"Chat response generated for {owner_id}/{soul_id} using model {request.model_id or 'default'}")
         
         return ChatResponse(
             response_text=response_text,
