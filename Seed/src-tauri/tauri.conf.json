@@ -37,6 +37,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [
+      "../../backend/**/*",
+      "python/**/*"
+    ],
     "windows": {
       "nsis": {
         "displayLanguageSelector": true,
@@ -44,7 +48,8 @@
         "installMode": "currentUser",
         "languages": ["English"],
         "compression": "lzma",
-        "startMenuFolder": "Cyberseed"
+        "startMenuFolder": "Cyberseed",
+        "template": "installer/nsis/CyberseedInstaller.nsi"
       }
     }
   }
