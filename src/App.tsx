@@ -1,11 +1,22 @@
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './providers/AuthProvider';
 import { SoulProvider } from './providers/SoulProvider';
 import { HealthStatus } from './components/HealthStatus';
 import { LoginForm } from './components/LoginForm';
 import { ChatInterface } from './components/ChatInterface';
+import { SetupScreen } from './components/SetupScreen';
+
+// Check if running in Tauri
+const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
 
 function AppContent() {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const [setupComplete, setSetupComplete] = useState(!isTauri); // Skip setup if not in Tauri
+
+  // Show setup screen for Tauri app before anything else
+  if (isTauri && !setupComplete) {
+    return <SetupScreen onSetupComplete={() => setSetupComplete(true)} />;
+  }
 
   if (isLoading) {
     return (
