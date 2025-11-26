@@ -83,6 +83,37 @@ logger.info(f"CyberSeed Backend starting in {security_config.environment} mode")
 
 
 # ==================
+# Helper Functions
+# ==================
+
+def sanitize_text(text: str, max_length: int = 50000) -> str:
+    """
+    Sanitize text to prevent prompt injection and excessive input.
+    
+    Args:
+        text: Input text to sanitize
+        max_length: Maximum allowed text length
+    
+    Returns:
+        Sanitized text
+    """
+    if not text:
+        return ""
+    
+    # Limit length to prevent DoS
+    text = text[:max_length]
+    
+    # Remove null bytes
+    text = text.replace('\x00', '')
+    
+    # Remove excessive whitespace but preserve structure
+    lines = [line.strip() for line in text.split('\n')]
+    text = '\n'.join(line for line in lines if line)
+    
+    return text
+
+
+# ==================
 # Health & Status Endpoints
 # ==================
 
@@ -533,13 +564,18 @@ async def chat(
             )
         
         # Build prompt with context from documents
-        prompt = request.query
+        # Sanitize user query to prevent prompt injection
+        sanitized_query = sanitize_text(request.query, max_length=10000)
+        
+        prompt = sanitized_query
         if docs:
+            # Sanitize document text as well
+            sanitized_docs = [sanitize_text(doc.get('text', ''), max_length=5000) for doc in docs]
             context_text = "\n\n".join([
-                f"Context {i+1}:\n{doc.get('text', '')}"
-                for i, doc in enumerate(docs)
+                f"Context {i+1}:\n{text}"
+                for i, text in enumerate(sanitized_docs) if text
             ])
-            prompt = f"Context information:\n{context_text}\n\nQuestion: {request.query}\n\nAnswer based on the context provided:"
+            prompt = f"Context information:\n{context_text}\n\nQuestion: {sanitized_query}\n\nAnswer based on the context provided:"
         
         # Generate response with real LLM via run_inference
         response_text = await run_inference(

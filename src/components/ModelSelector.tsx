@@ -10,10 +10,16 @@ export function ModelSelector() {
 
   useEffect(() => {
     api.getModels()
-      .then((data) => setModels(data))
+      .then((data) => {
+        setModels(data);
+        // If no model is selected yet, use the backend's default
+        if (selectedModel === 'local-llama' && data.default !== selectedModel) {
+          setSelectedModel(data.default);
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedModel, setSelectedModel]);
 
   if (loading) return <span className="text-xs text-gray-400">Loading models...</span>;
   if (!models) return null;

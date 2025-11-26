@@ -9,7 +9,7 @@ PROVIDERS = {
 async def run_inference(
     prompt: str,
     history: Optional[List[dict]] = None,
-    model_id: str = None
+    model_id: Optional[str] = None
 ) -> str:
     if model_id is None:
         model_id = DEFAULT_MODEL

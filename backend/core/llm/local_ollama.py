@@ -40,10 +40,29 @@ class OllamaClient(LLMClient):
         }
         
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                f"{self.base_url}/api/chat",
-                json=payload
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data.get("message", {}).get("content", "")
+            try:
+                response = await client.post(
+                    f"{self.base_url}/api/chat",
+                    json=payload
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data.get("message", {}).get("content", "")
+            except httpx.ConnectError as e:
+                raise ConnectionError(
+                    f"Failed to connect to Ollama at {self.base_url}. "
+                    "Please ensure Ollama is running and accessible."
+                ) from e
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 404:
+                    raise ValueError(
+                        f"Model '{model}' not found. Please pull the model using: ollama pull {model}"
+                    ) from e
+                raise RuntimeError(
+                    f"Ollama API error (status {e.response.status_code}): {e.response.text}"
+                ) from e
+            except httpx.TimeoutException as e:
+                raise TimeoutError(
+                    f"Request to Ollama timed out after {self.timeout} seconds. "
+                    "The model may be too large or the server is overloaded."
+                ) from e

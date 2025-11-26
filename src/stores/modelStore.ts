@@ -9,6 +9,7 @@ interface ModelState {
 export const useModelStore = create<ModelState>()(
   persist(
     (set) => ({
+      // Default fallback - ModelSelector will update to backend's default on load
       selectedModel: 'local-llama',
       setSelectedModel: (model) => set({ selectedModel: model }),
     }),
