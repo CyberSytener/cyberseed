@@ -67,6 +67,9 @@ impl BackendManager {
 
     /// Auto-detect Python executable (embedded vs system)
     fn detect_python(&self) -> String {
+        // Determine platform-specific Python executable name
+        let python_exe = if cfg!(windows) { "python.exe" } else { "python3" };
+        
         // Try embedded Python first (in resources folder)
         let embedded_python = std::env::current_exe()
             .ok()
@@ -74,9 +77,9 @@ impl BackendManager {
             .and_then(|app_dir| {
                 // Check multiple possible locations for embedded Python
                 let locations = vec![
-                    app_dir.join("python").join("python.exe"),
-                    app_dir.join("resources").join("python").join("python.exe"),
-                    app_dir.join("..").join("Resources").join("python").join("python.exe"),
+                    app_dir.join("python").join(python_exe),
+                    app_dir.join("resources").join("python").join(python_exe),
+                    app_dir.join("..").join("Resources").join("python").join(python_exe),
                 ];
                 locations.into_iter().find(|p| p.exists())
             });
@@ -92,9 +95,10 @@ impl BackendManager {
                 .output()
             {
                 if output.status.success() {
-                    let version = String::from_utf8_lossy(&output.stdout);
+                    let version_str = String::from_utf8_lossy(&output.stdout);
+                    // Parse version using regex-like matching: "Python X.Y.Z"
                     // Check if version is 3.11 or higher
-                    if version.contains("3.11") || version.contains("3.12") || version.contains("3.13") {
+                    if Self::is_python_311_or_higher(&version_str) {
                         return cmd.to_string();
                     }
                 }
@@ -107,6 +111,22 @@ impl BackendManager {
         } else {
             "python3".to_string()
         }
+    }
+
+    /// Check if Python version string indicates 3.11 or higher
+    fn is_python_311_or_higher(version_str: &str) -> bool {
+        // Extract version from string like "Python 3.11.5" or "Python 3.12.0"
+        let version_str = version_str.trim();
+        if let Some(version_part) = version_str.strip_prefix("Python ") {
+            let parts: Vec<&str> = version_part.split('.').collect();
+            if parts.len() >= 2 {
+                if let (Ok(major), Ok(minor)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                    // Require Python 3.11 or higher
+                    return major == 3 && minor >= 11;
+                }
+            }
+        }
+        false
     }
 
     /// Check if Python is available
