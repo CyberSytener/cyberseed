@@ -44,7 +44,7 @@ export function useBackendStatus() {
     setIsLoading(true);
     try {
       // Get the current directory or use a default path
-      const defaultDir = typeof window !== 'undefined' && (window as any).__TAURI__ 
+      const defaultDir = typeof window !== 'undefined' && (window as unknown as { __TAURI__?: unknown }).__TAURI__ 
         ? await import('@tauri-apps/api/path').then(p => p.appDataDir())
         : './backend';
       

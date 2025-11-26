@@ -1,43 +1,31 @@
 /**
  * Setup Screen Component
  * First-run setup UI for checking dependencies and starting backend
+ * 
+ * Note: This component intentionally uses setState in effects for auto-progressing
+ * setup wizard pattern. eslint rules disabled where necessary.
  */
 
-import { useState, useEffect } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+
+import { useState, useEffect, useCallback } from 'react';
 import { useBackendStatus, useDependencies } from '../hooks/useTauri';
 
 interface SetupScreenProps {
   onSetupComplete: () => void;
 }
 
+type SetupStep = 'checking' | 'installing' | 'starting' | 'ready' | 'error';
+
 export function SetupScreen({ onSetupComplete }: SetupScreenProps) {
   const { status, startBackend, isLoading: backendLoading } = useBackendStatus();
   const { dependencies, installRequirements, isInstalling, checkDependencies } = useDependencies();
-  const [setupStep, setSetupStep] = useState<'checking' | 'installing' | 'starting' | 'ready' | 'error'>('checking');
+  const [setupStep, setSetupStep] = useState<SetupStep>('checking');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    // Auto-proceed through setup steps
-    if (dependencies.checking) {
-      setSetupStep('checking');
-    } else if (!dependencies.pythonAvailable) {
-      setSetupStep('error');
-      setErrorMessage('Python not found. Please install Python 3.11+ or run with embedded Python.');
-    } else if (!dependencies.requirementsInstalled && !isInstalling) {
-      setSetupStep('installing');
-    } else if (dependencies.requirementsInstalled && !status.isRunning && !backendLoading) {
-      setSetupStep('starting');
-    } else if (status.isRunning) {
-      setSetupStep('ready');
-      // Give backend a moment to fully initialize
-      setTimeout(() => {
-        onSetupComplete();
-      }, 1000);
-    }
-  }, [dependencies, status, isInstalling, backendLoading, onSetupComplete]);
-
-  const handleInstallDependencies = async () => {
+  // Memoize the install and start handlers
+  const handleInstallDependencies = useCallback(async () => {
     try {
       setErrorMessage('');
       await installRequirements();
@@ -45,9 +33,9 @@ export function SetupScreen({ onSetupComplete }: SetupScreenProps) {
       setSetupStep('error');
       setErrorMessage(`Failed to install dependencies: ${error}`);
     }
-  };
+  }, [installRequirements]);
 
-  const handleStartBackend = async () => {
+  const handleStartBackend = useCallback(async () => {
     try {
       setErrorMessage('');
       await startBackend();
@@ -55,7 +43,59 @@ export function SetupScreen({ onSetupComplete }: SetupScreenProps) {
       setSetupStep('error');
       setErrorMessage(`Failed to start backend: ${error}`);
     }
-  };
+  }, [startBackend]);
+
+  // Determine setup step based on current state
+  useEffect(() => {
+    let nextStep: SetupStep = setupStep;
+    let nextError = errorMessage;
+
+    if (dependencies.checking) {
+      nextStep = 'checking';
+    } else if (!dependencies.pythonAvailable) {
+      nextStep = 'error';
+      nextError = 'Python not found. Please install Python 3.11+ or run with embedded Python.';
+    } else if (!dependencies.requirementsInstalled && !isInstalling) {
+      nextStep = 'installing';
+    } else if (dependencies.requirementsInstalled && !status.isRunning && !backendLoading) {
+      nextStep = 'starting';
+    } else if (status.isRunning) {
+      nextStep = 'ready';
+    }
+
+    if (nextStep !== setupStep) {
+      setSetupStep(nextStep);
+    }
+    if (nextError !== errorMessage) {
+      setErrorMessage(nextError);
+    }
+  }, [dependencies, status, isInstalling, backendLoading, setupStep, errorMessage]);
+
+  // Handle ready state
+  useEffect(() => {
+    if (setupStep === 'ready') {
+      const timer = setTimeout(() => {
+        onSetupComplete();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [setupStep, onSetupComplete]);
+
+  // Auto-install when in installing step
+  // This is intentional for auto-progressing setup wizard
+  useEffect(() => {
+    if (setupStep === 'installing' && !isInstalling) {
+      void handleInstallDependencies();
+    }
+  }, [setupStep, isInstalling, handleInstallDependencies]);
+
+  // Auto-start when in starting step
+  // This is intentional for auto-progressing setup wizard
+  useEffect(() => {
+    if (setupStep === 'starting' && !backendLoading && !status.isRunning) {
+      void handleStartBackend();
+    }
+  }, [setupStep, backendLoading, status.isRunning, handleStartBackend]);
 
   const handleRetry = async () => {
     setRetryCount(prev => prev + 1);
@@ -67,19 +107,6 @@ export function SetupScreen({ onSetupComplete }: SetupScreenProps) {
       setErrorMessage(`Retry failed: ${error}`);
     }
   };
-
-  // Auto-install and auto-start
-  useEffect(() => {
-    if (setupStep === 'installing' && !isInstalling) {
-      handleInstallDependencies();
-    }
-  }, [setupStep, isInstalling]);
-
-  useEffect(() => {
-    if (setupStep === 'starting' && !backendLoading && !status.isRunning) {
-      handleStartBackend();
-    }
-  }, [setupStep, backendLoading, status.isRunning]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">

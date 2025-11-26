@@ -55,3 +55,17 @@ htmlcov/
 # Backend data directory
 /data/
 backend/.env
+
+# Tauri
+Seed/src-tauri/target/
+Seed/src-tauri/python/
+Seed/src-tauri/WixTools/
+Seed/src-tauri/gen/
+
+# Build artifacts
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.deb
+
