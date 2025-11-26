@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { AuthProvider, useAuth } from "./providers/AuthProvider";
+import { SoulProvider } from "./providers/SoulProvider";
 import { BreathingOrb } from "./components/BreathingOrb";
 import { NeuralBackground } from "./components/NeuralBackground";
 import { ConsciousnessWave } from "./components/ConsciousnessWave";
@@ -7,9 +9,27 @@ import { Sidebar } from "./components/Sidebar";
 import { MainContent } from "./components/MainContent";
 import { DashboardContent } from "./components/DashboardContent";
 import { EventsContent } from "./components/EventsContent";
+import { LoginForm } from "./components/LoginForm";
+import { ChatInterface } from "./components/ChatInterface";
 
-export default function App() {
+function AppContent() {
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeView, setActiveView] = useState("dashboard");
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
@@ -37,7 +57,7 @@ export default function App() {
           {/* Main Content Area */}
           {activeView === "chat" ? (
             <div className="flex-1 flex flex-col overflow-hidden">
-              
+              <ChatInterface />
             </div>
           ) : activeView === "events" ? (
             <MainContent>
@@ -51,5 +71,15 @@ export default function App() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <SoulProvider>
+        <AppContent />
+      </SoulProvider>
+    </AuthProvider>
   );
 }

@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Settings, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import logo from "../assets/app-logo.png";
+import { HealthStatus } from "./HealthStatus";
 
 export function TopBar() {
   const [ownerOpen, setOwnerOpen] = useState(false);
@@ -79,15 +80,18 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Right: Settings */}
-      <motion.button
-        whileHover={{ scale: 1.05, rotate: 90 }}
-        whileTap={{ scale: 0.95 }}
-        transition={{ duration: 0.3 }}
-        className="w-9 h-9 rounded-full border border-black/5 bg-white/50 backdrop-blur-sm flex items-center justify-center hover:border-black/10"
-      >
-        <Settings className="w-4 h-4 opacity-60" strokeWidth={1.5} />
-      </motion.button>
+      {/* Right: Health Status and Settings */}
+      <div className="flex items-center gap-3">
+        <HealthStatus />
+        <motion.button
+          whileHover={{ scale: 1.05, rotate: 90 }}
+          whileTap={{ scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+          className="w-9 h-9 rounded-full border border-black/5 bg-white/50 backdrop-blur-sm flex items-center justify-center hover:border-black/10"
+        >
+          <Settings className="w-4 h-4 opacity-60" strokeWidth={1.5} />
+        </motion.button>
+      </div>
     </motion.div>
   );
 }
