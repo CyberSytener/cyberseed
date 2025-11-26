@@ -31,6 +31,8 @@ from backend.core.exceptions import (
     raise_not_found,
     raise_bad_request
 )
+from backend.core.llm import run_inference, get_model_config, MODELS
+from backend.core.llm.model_registry import list_models, DEFAULT_MODEL
 
 from backend.schemas_v2 import (
     HealthResponse,
@@ -50,7 +52,9 @@ from backend.schemas_v2 import (
     SystemStatus,
     LLMStatus,
     TranscriptionStatus,
-    RefreshTokenRequest
+    RefreshTokenRequest,
+    ModelsResponse,
+    ModelInfo
 )
 
 # Initialize logger
@@ -385,6 +389,28 @@ async def delete_owner_data(
 # Core Endpoints
 # ==================
 
+@app.get("/models", response_model=ModelsResponse, tags=["Core"])
+async def get_models():
+    """Get list of available LLM models."""
+    models_dict = list_models()
+    
+    # Convert to ModelInfo objects
+    models_response = {}
+    for model_id, config in models_dict.items():
+        models_response[model_id] = ModelInfo(
+            provider=config["provider"],
+            model_name=config["model_name"],
+            max_tokens=config["max_tokens"],
+            temperature=config["temperature"],
+            description=config["description"]
+        )
+    
+    return ModelsResponse(
+        models=models_response,
+        default=DEFAULT_MODEL
+    )
+
+
 @app.post("/souls/{owner_id}/{soul_id}/transcribe", response_model=TranscribeResponse, tags=["Core"])
 async def transcribe_audio(
     owner_id: str,
@@ -506,18 +532,23 @@ async def chat(
                 top_k=request.top_k
             )
         
-        # Build context from documents
-        context = [doc.get("text", "") for doc in docs] if docs else None
+        # Build prompt with context from documents
+        prompt = request.query
+        if docs:
+            context_text = "\n\n".join([
+                f"Context {i+1}:\n{doc.get('text', '')}"
+                for i, doc in enumerate(docs)
+            ])
+            prompt = f"Context information:\n{context_text}\n\nQuestion: {request.query}\n\nAnswer based on the context provided:"
         
-        # Generate response with LLM (placeholder in Phase 1)
-        response_text = await llm_runner.generate(
-            prompt=request.query,
-            max_tokens=request.max_tokens,
-            temperature=request.temperature,
-            context=context
+        # Generate response with real LLM via run_inference
+        response_text = await run_inference(
+            prompt=prompt,
+            history=None,
+            model_id=request.model_id
         )
         
-        logger.info(f"Chat response generated for {owner_id}/{soul_id}")
+        logger.info(f"Chat response generated for {owner_id}/{soul_id} using model {request.model_id or 'default'}")
         
         return ChatResponse(
             response_text=response_text,
