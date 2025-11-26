@@ -88,14 +88,19 @@ logger.info(f"CyberSeed Backend starting in {security_config.environment} mode")
 
 def sanitize_text(text: str, max_length: int = 50000) -> str:
     """
-    Sanitize text to prevent prompt injection and excessive input.
+    Sanitize text to prevent prompt injection attacks and DoS via excessive input.
+    
+    Security measures:
+    - Limits text length to prevent Denial of Service attacks
+    - Removes null bytes that could cause parsing issues
+    - Normalizes whitespace while preserving text structure
     
     Args:
         text: Input text to sanitize
-        max_length: Maximum allowed text length
+        max_length: Maximum allowed text length (default: 50000 characters)
     
     Returns:
-        Sanitized text
+        Sanitized text safe for use in LLM prompts
     """
     if not text:
         return ""

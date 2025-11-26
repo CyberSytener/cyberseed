@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Default fallback model ID - will be synced with backend's default on first load
+export const DEFAULT_MODEL_FALLBACK = 'local-llama';
+
 interface ModelState {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
@@ -9,8 +12,7 @@ interface ModelState {
 export const useModelStore = create<ModelState>()(
   persist(
     (set) => ({
-      // Default fallback - ModelSelector will update to backend's default on load
-      selectedModel: 'local-llama',
+      selectedModel: DEFAULT_MODEL_FALLBACK,
       setSelectedModel: (model) => set({ selectedModel: model }),
     }),
     { name: 'model-storage' }

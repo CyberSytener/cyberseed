@@ -6,6 +6,9 @@ from .base import LLMClient
 class OllamaClient(LLMClient):
     """Ollama local LLM provider."""
     
+    # API endpoint for chat completions
+    CHAT_ENDPOINT = "/api/chat"
+    
     def __init__(self):
         self.base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.timeout = 120.0
@@ -42,7 +45,7 @@ class OllamaClient(LLMClient):
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             try:
                 response = await client.post(
-                    f"{self.base_url}/api/chat",
+                    f"{self.base_url}{self.CHAT_ENDPOINT}",
                     json=payload
                 )
                 response.raise_for_status()
