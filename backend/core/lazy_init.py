@@ -46,8 +46,13 @@ class LazyModule:
             else:
                 # Standard import using importlib
                 parts = self._module_name.split('.')
-                module = importlib.import_module('.'.join(parts[:-1]))
-                self._module = getattr(module, parts[-1]) if len(parts) > 1 else module
+                if len(parts) == 1:
+                    # Simple module import
+                    self._module = importlib.import_module(self._module_name)
+                else:
+                    # Nested attribute access (e.g., 'os.path')
+                    module = importlib.import_module('.'.join(parts[:-1]))
+                    self._module = getattr(module, parts[-1])
             
             self._loaded = True
             return self._module
