@@ -31,7 +31,7 @@ from backend.core.exceptions import (
     raise_not_found,
     raise_bad_request
 )
-from backend.core.llm import run_inference, get_model_config, MODELS
+from backend.core.llm import run_inference
 from backend.core.llm.model_registry import list_models, DEFAULT_MODEL
 
 from backend.schemas_v2 import (
