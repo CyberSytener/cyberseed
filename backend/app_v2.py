@@ -1,6 +1,7 @@
 """
 CyberSeed FastAPI Backend Application (v2)
 Phase 1: Core structure with JWT auth and scoped storage.
+Phase 4: Added lazy loading support for resource optimization.
 """
 
 import os
@@ -33,6 +34,10 @@ from backend.core.exceptions import (
 )
 from backend.core.llm import run_inference
 from backend.core.llm.model_registry import list_models, DEFAULT_MODEL
+
+# Lazy loading support - when heavy modules are added, import like:
+# from backend.core.lazy_init import embeddings_lazy, whisper_lazy
+# This minimizes startup time for desktop app
 
 from backend.schemas_v2 import (
     HealthResponse,
