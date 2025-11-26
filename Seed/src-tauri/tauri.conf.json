@@ -38,8 +38,7 @@
       "icons/icon.ico"
     ],
     "resources": [
-      "../../backend/**/*",
-      "python/**/*"
+      "../../backend/**/*"
     ],
     "windows": {
       "nsis": {

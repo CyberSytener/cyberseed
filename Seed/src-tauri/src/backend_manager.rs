@@ -29,7 +29,7 @@ impl BackendManager {
         let python_cmd = python_path.unwrap_or_else(|| self.detect_python());
         
         // Build command to start backend
-        let backend_script = backend_dir.join("backend").join("app_v2.py");
+        let backend_script = backend_dir.join("app_v2.py");
         
         if !backend_script.exists() {
             return Err(format!("Backend script not found: {:?}", backend_script));
@@ -67,17 +67,41 @@ impl BackendManager {
 
     /// Auto-detect Python executable (embedded vs system)
     fn detect_python(&self) -> String {
-        // Try embedded Python first
+        // Try embedded Python first (in resources folder)
         let embedded_python = std::env::current_exe()
             .ok()
-            .and_then(|exe| exe.parent().map(|p| p.join("python").join("python.exe")))
-            .filter(|p| p.exists());
+            .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
+            .and_then(|app_dir| {
+                // Check multiple possible locations for embedded Python
+                let locations = vec![
+                    app_dir.join("python").join("python.exe"),
+                    app_dir.join("resources").join("python").join("python.exe"),
+                    app_dir.join("..").join("Resources").join("python").join("python.exe"),
+                ];
+                locations.into_iter().find(|p| p.exists())
+            });
 
         if let Some(python) = embedded_python {
             return python.to_string_lossy().to_string();
         }
 
-        // Fall back to system Python
+        // Try to find Python 3.11+ in system PATH
+        for cmd in &["python3.11", "python3.12", "python3.13", "python3", "python"] {
+            if let Ok(output) = std::process::Command::new(cmd)
+                .arg("--version")
+                .output()
+            {
+                if output.status.success() {
+                    let version = String::from_utf8_lossy(&output.stdout);
+                    // Check if version is 3.11 or higher
+                    if version.contains("3.11") || version.contains("3.12") || version.contains("3.13") {
+                        return cmd.to_string();
+                    }
+                }
+            }
+        }
+
+        // Fall back to generic python command
         if cfg!(windows) {
             "python".to_string()
         } else {
