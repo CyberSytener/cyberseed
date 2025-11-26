@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     max_tokens: int = Field(default=512, ge=1, le=4096, description="Maximum tokens to generate")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="Sampling temperature")
     include_sources: bool = Field(default=True, description="Include source documents in response")
+    model_id: Optional[str] = Field(default=None, description="Model ID to use for generation")
 
 
 class TranscribeRequest(BaseModel):
@@ -139,3 +140,18 @@ class TrainResponse(BaseModel):
     success: bool = Field(..., description="Whether training was successful")
     indexed_documents: int = Field(..., description="Number of documents indexed")
     message: str = Field(..., description="Result message")
+
+
+class ModelInfo(BaseModel):
+    """Model information."""
+    provider: str = Field(..., description="Provider name (e.g., ollama)")
+    model_name: str = Field(..., description="Model name/identifier")
+    max_tokens: int = Field(..., description="Maximum tokens")
+    temperature: float = Field(..., description="Default temperature")
+    description: str = Field(..., description="Human-readable description")
+
+
+class ModelsResponse(BaseModel):
+    """Available models response."""
+    models: Dict[str, ModelInfo] = Field(..., description="Dictionary of available models")
+    default: str = Field(..., description="Default model ID")

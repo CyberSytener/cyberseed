@@ -1,4 +1,5 @@
 import type { TokenResponse, HealthResponse, ChatRequest, ChatResponse, FileInfo, UploadResponse, SoulStatus, TrainResponse, TranscribeRequest, TranscribeResponse } from './types';
+import type { ModelsResponse } from './models';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000';
 const TOKEN_KEY = 'cyberseed_token';
@@ -68,6 +69,10 @@ export async function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>('/health');
 }
 
+export async function getModels(): Promise<ModelsResponse> {
+  return apiFetch<ModelsResponse>('/models');
+}
+
 export async function getSoulStatus(ownerId: string, soulId: string): Promise<SoulStatus> {
   return apiFetch<SoulStatus>(`/status/soul/${ownerId}/${soulId}`);
 }
@@ -119,6 +124,7 @@ export const api = {
   logout,
   refreshToken,
   getHealth,
+  getModels,
   getSoulStatus,
   chat,
   uploadFiles,
