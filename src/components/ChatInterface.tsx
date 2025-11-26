@@ -31,7 +31,7 @@ export function ChatInterface() {
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
       content: input.trim(),
       timestamp: new Date(),
@@ -47,7 +47,7 @@ export function ChatInterface() {
 
     if (response) {
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: crypto.randomUUID(),
         role: 'assistant',
         content: response.response_text,
         timestamp: new Date(),

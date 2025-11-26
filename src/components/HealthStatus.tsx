@@ -16,12 +16,14 @@ export function HealthStatus() {
 
   const getStatusColor = () => {
     if (isLoading) return 'bg-yellow-500';
+    if (isHealthy === null) return 'bg-gray-400';
     if (error || !isHealthy) return 'bg-red-500';
     return 'bg-green-500';
   };
 
   const getStatusText = () => {
     if (isLoading) return 'Checking...';
+    if (isHealthy === null) return 'Unknown';
     if (error) return 'Disconnected';
     if (isHealthy) return 'Connected';
     return 'Unknown';

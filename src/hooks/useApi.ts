@@ -92,7 +92,7 @@ export function useTrainSoul(ownerId: string | null, soulId: string | null) {
 export function useHealth() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isHealthy, setIsHealthy] = useState(false);
+  const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
 
   const checkHealth = useCallback(async () => {
     setIsLoading(true);

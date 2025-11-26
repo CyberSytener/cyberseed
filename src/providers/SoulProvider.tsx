@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthProvider';
 import type { SoulStatus } from '../lib/types';
 import { api } from '../lib/api';
@@ -23,6 +23,21 @@ export function SoulProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const refreshStatus = useCallback(async () => {
+    if (!ownerId || !soulId) return;
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const status = await api.getSoulStatus(ownerId, soulId);
+      setSoulStatus(status);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch soul status');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [ownerId, soulId]);
+
   // Initialize with default soul when authenticated
   useEffect(() => {
     if (isAuthenticated && user && !ownerId && !soulId) {
@@ -36,22 +51,7 @@ export function SoulProvider({ children }: { children: React.ReactNode }) {
     if (isAuthenticated && ownerId && soulId) {
       refreshStatus();
     }
-  }, [isAuthenticated, ownerId, soulId]);
-
-  const refreshStatus = async () => {
-    if (!ownerId || !soulId) return;
-    
-    setIsLoading(true);
-    setError(null);
-    try {
-      const status = await api.getSoulStatus(ownerId, soulId);
-      setSoulStatus(status);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch soul status');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [isAuthenticated, ownerId, soulId, refreshStatus]);
 
   const setSoul = (newOwnerId: string, newSoulId: string) => {
     setOwnerId(newOwnerId);
