@@ -23,9 +23,10 @@ ShowUninstDetails show
 !define MUI_ABORTWARNING
 !define MUI_ICON "..\..\icons\icon.ico"
 !define MUI_UNICON "..\..\icons\icon.ico"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "..\..\icons\installer-banner.bmp"
+; Bitmap files commented out - files don't exist
+; !define MUI_WELCOMEFINISHPAGE_BITMAP "..\..\icons\installer-banner.bmp"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "..\..\icons\installer-header.bmp"
+; !define MUI_HEADERIMAGE_BITMAP "..\..\icons\installer-header.bmp"
 
 ; Pages
 !insertmacro MUI_PAGE_WELCOME
@@ -39,6 +40,9 @@ ShowUninstDetails show
 
 ; Languages
 !insertmacro MUI_LANGUAGE "English"
+
+; Variables
+Var PYTHON_AVAILABLE
 
 ; Functions
 
@@ -116,14 +120,14 @@ Section "MainSection" SEC01
     
     ; Create shortcuts
     CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\cyberseed.exe"
     CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" "$INSTDIR\uninst.exe"
-    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\cyberseed.exe"
     
     ; Write registry entries
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-    WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_NAME}.exe"
+    WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\cyberseed.exe"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"

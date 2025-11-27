@@ -137,13 +137,13 @@ if (-not (Test-Path $installerOutput)) {
 
 # Copy application files
 $releaseDir = "Seed\src-tauri\target\release"
-$exePath = Join-Path $releaseDir "Cyberseed.exe"
+$exePath = Join-Path $releaseDir "cyberseed.exe"
 
 if (Test-Path $exePath) {
     Copy-Item $exePath -Destination $stagingDir -Force
-    Write-Host "  Copied Cyberseed.exe" -ForegroundColor White
+    Write-Host "  Copied cyberseed.exe" -ForegroundColor White
 } else {
-    Write-Host "Error: Cyberseed.exe not found at $exePath" -ForegroundColor Red
+    Write-Host "Error: cyberseed.exe not found at $exePath" -ForegroundColor Red
     Write-Host "Please build the application first or remove -SkipBuild flag" -ForegroundColor Yellow
     exit 1
 }

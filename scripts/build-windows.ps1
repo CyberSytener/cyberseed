@@ -118,7 +118,7 @@ if (Test-Path $targetDir) {
     }
     
     # Copy backend files
-    Copy-Item "backend\*" -Destination $backendTarget -Recurse -Force
+    Copy-Item "backend\*" -Destination $backendTarget -Recurse -Force -ErrorAction SilentlyContinue
     Write-Host "Backend files copied to $backendTarget" -ForegroundColor Green
 } else {
     Write-Host "Warning: Target directory not found: $targetDir" -ForegroundColor Yellow
