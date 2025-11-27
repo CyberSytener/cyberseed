@@ -31,7 +31,7 @@ ShowUninstDetails show
 !define MUI_HEADERIMAGE
 !define MUI_WELCOMEPAGE_TITLE "Welcome to ${PRODUCT_NAME} Setup"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through the installation of ${PRODUCT_NAME}.$\r$\n$\r$\nThis is a standalone installer that includes all necessary components."
-!define MUI_FINISHPAGE_RUN "$INSTDIR\${PRODUCT_NAME}.exe"
+!define MUI_FINISHPAGE_RUN "$INSTDIR\cyberseed.exe"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch ${PRODUCT_NAME}"
 
 ; Pages
@@ -144,7 +144,7 @@ Section "Cyberseed Application" SEC01
     SetOverwrite on
     
     ; Copy main application
-    File "${BUILD_DIR}\Cyberseed.exe"
+    File "${BUILD_DIR}\cyberseed.exe"
     
     ; Copy backend files
     SetOutPath "$INSTDIR\backend"
@@ -155,13 +155,13 @@ Section "Cyberseed Application" SEC01
     
     ; Create shortcuts
     CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+    CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\cyberseed.exe"
     CreateShortCut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall.lnk" "$INSTDIR\uninst.exe"
     
     ; Write registry entries
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\uninst.exe"
-    WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\${PRODUCT_NAME}.exe"
+    WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\cyberseed.exe"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
     WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
@@ -198,7 +198,7 @@ Section /o "Embedded Python 3.11" SEC02
 SectionEnd
 
 Section "Desktop Shortcut" SEC03
-    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\${PRODUCT_NAME}.exe"
+    CreateShortCut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\cyberseed.exe"
 SectionEnd
 
 Section "Install Python Dependencies" SEC04
@@ -223,7 +223,7 @@ Section "Uninstall"
     RMDir "$SMPROGRAMS\${PRODUCT_NAME}"
     
     ; Remove files and directories
-    Delete "$INSTDIR\${PRODUCT_NAME}.exe"
+    Delete "$INSTDIR\cyberseed.exe"
     Delete "$INSTDIR\uninst.exe"
     RMDir /r "$INSTDIR\backend"
     RMDir /r "$INSTDIR\python"
