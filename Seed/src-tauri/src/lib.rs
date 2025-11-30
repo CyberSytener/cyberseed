@@ -27,6 +27,7 @@ pub fn run() {
             commands::check_dependencies,
             commands::install_requirements,
             commands::get_backend_port,
+            commands::get_python_info,
         ])
         .on_window_event(move |_window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
