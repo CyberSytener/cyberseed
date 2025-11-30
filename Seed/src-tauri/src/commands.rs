@@ -1,6 +1,6 @@
-use tauri::State;
-use std::path::PathBuf;
 use crate::backend_manager::BackendManager;
+use std::path::PathBuf;
+use tauri::State;
 
 #[tauri::command]
 pub async fn start_backend(
@@ -29,17 +29,29 @@ pub async fn check_dependencies(
     requirements_path: String,
 ) -> Result<serde_json::Value, String> {
     let req_path = PathBuf::from(requirements_path);
-    
-    let python_available = manager.check_python_available(python_path.clone())?;
-    let requirements_installed = if python_available {
-        manager.check_requirements(python_path, req_path)?
+
+    // Get detailed Python info instead of just boolean
+    let python_details = manager.get_python_details(python_path.clone())?;
+    let python_available = python_details
+        .get("meets_requirements")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    // Check requirements and capture error message if any
+    let (requirements_installed, requirements_error) = if python_available {
+        match manager.check_requirements(python_path, req_path) {
+            Ok(installed) => (installed, None),
+            Err(e) => (false, Some(e)),
+        }
     } else {
-        false
+        (false, None)
     };
 
     Ok(serde_json::json!({
         "python_available": python_available,
+        "python_details": python_details,
         "requirements_installed": requirements_installed,
+        "requirements_error": requirements_error,
     }))
 }
 
@@ -56,4 +68,12 @@ pub async fn install_requirements(
 #[tauri::command]
 pub async fn get_backend_port(manager: State<'_, BackendManager>) -> Result<u16, String> {
     Ok(manager.backend_port)
+}
+
+#[tauri::command]
+pub async fn get_python_info(
+    manager: State<'_, BackendManager>,
+    python_path: Option<String>,
+) -> Result<serde_json::Value, String> {
+    manager.get_python_details(python_path)
 }

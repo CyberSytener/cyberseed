@@ -76,31 +76,215 @@ Function .onInit
     StrCpy $INSTALL_EMBEDDED_PYTHON "0"
 FunctionEnd
 
+; Variables for version parsing
+Var PYTHON_MAJOR
+Var PYTHON_MINOR
+
 Function CheckSystemPython
-    DetailPrint "Checking for system Python..."
+    DetailPrint "Checking for system Python 3.11+..."
     
-    ; Try to find Python in PATH
+    ; Initialize variables
+    StrCpy $PYTHON_AVAILABLE "0"
+    StrCpy $PYTHON_PATH ""
+    StrCpy $PYTHON_VERSION_STR ""
+    
+    ; Try multiple Python commands in order of preference
+    ; First try specific version commands
+    Call TryPython311
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    Call TryPython312
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    Call TryPython313
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    ; Try py launcher with version specifiers (Windows Python launcher)
+    Call TryPyLauncher
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    ; Try generic python3 command
+    Call TryPython3Generic
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    ; Try generic python command
+    Call TryPythonGeneric
+    ${If} $PYTHON_AVAILABLE == "1"
+        Return
+    ${EndIf}
+    
+    DetailPrint "No suitable Python 3.11+ found on system"
+FunctionEnd
+
+Function TryPython311
+    nsExec::ExecToStack 'python3.11 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'python3.11 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3.11: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+Function TryPython312
+    nsExec::ExecToStack 'python3.12 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'python3.12 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3.12: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+Function TryPython313
+    nsExec::ExecToStack 'python3.13 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'python3.13 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3.13: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+Function TryPyLauncher
+    ; Try py launcher with Python 3.11+
+    nsExec::ExecToStack 'py -3.11 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'py -3.11 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python via py launcher: $PYTHON_PATH"
+            Return
+        ${EndIf}
+    ${EndIf}
+    
+    ; Try py -3.12
+    nsExec::ExecToStack 'py -3.12 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'py -3.12 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3.12 via py launcher: $PYTHON_PATH"
+            Return
+        ${EndIf}
+    ${EndIf}
+    
+    ; Try py -3.13
+    nsExec::ExecToStack 'py -3.13 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'py -3.13 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3.13 via py launcher: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+Function TryPython3Generic
+    nsExec::ExecToStack 'python3 --version'
+    Pop $0
+    Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'python3 -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python 3: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+Function TryPythonGeneric
     nsExec::ExecToStack 'python --version'
     Pop $0
     Pop $1
+    ${If} $0 == 0
+        Call ValidatePythonVersion
+        ${If} $PYTHON_AVAILABLE == "1"
+            nsExec::ExecToStack 'python -c "import sys; print(sys.executable)"'
+            Pop $0
+            Pop $PYTHON_PATH
+            StrCpy $PYTHON_VERSION_STR $1
+            DetailPrint "Found Python: $PYTHON_PATH"
+        ${EndIf}
+    ${EndIf}
+FunctionEnd
+
+; Validate that Python version meets minimum requirements (3.11+)
+; Input: $1 contains version string like "Python 3.11.5"
+; Sets $PYTHON_AVAILABLE to "1" if version >= 3.11, "0" otherwise
+Function ValidatePythonVersion
+    StrCpy $PYTHON_AVAILABLE "0"
+    
+    ; Extract version numbers using Python itself for reliability
+    nsExec::ExecToStack 'python -c "import sys; print(sys.version_info.major, sys.version_info.minor)"'
+    Pop $0
+    Pop $2
     
     ${If} $0 == 0
-        DetailPrint "System Python found: $1"
+        ; Parse the output "3 11" to get major and minor
+        StrCpy $PYTHON_MAJOR $2 1  ; First character
+        StrCpy $PYTHON_MINOR $2 2 2  ; Two characters starting at position 2
         
-        ; Get Python path
-        nsExec::ExecToStack 'python -c "import sys; print(sys.executable)"'
-        Pop $0
-        Pop $2
-        
-        ${If} $0 == 0
-            StrCpy $PYTHON_PATH $2
-            StrCpy $PYTHON_AVAILABLE "1"
-            StrCpy $PYTHON_VERSION_STR $1
-            DetailPrint "Python executable: $PYTHON_PATH"
+        ; Check version >= 3.11
+        ${If} $PYTHON_MAJOR == "3"
+            IntCmp $PYTHON_MINOR 11 version_ok version_too_low version_ok
+            version_ok:
+                StrCpy $PYTHON_AVAILABLE "1"
+                DetailPrint "Python version $1 meets requirements (3.11+)"
+                Return
+            version_too_low:
+                DetailPrint "Python version $1 is below minimum required (3.11+)"
+        ${Else}
+            DetailPrint "Python major version $PYTHON_MAJOR is not supported (need Python 3)"
         ${EndIf}
     ${Else}
-        DetailPrint "System Python not found"
-        StrCpy $PYTHON_AVAILABLE "0"
+        DetailPrint "Could not determine Python version"
     ${EndIf}
 FunctionEnd
 
@@ -131,7 +315,7 @@ Function InstallPipPackages
         ${EndIf}
     ${Else}
         DetailPrint "Warning: No Python available for dependency installation"
-        MessageBox MB_OK|MB_ICONEXCLAMATION "Python was not found or selected. You may need to install Python 3.11+ and dependencies manually."
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Python 3.11+ was not found on your system. You may need to:$\r$\n$\r$\n1. Install Python 3.11 or later from python.org$\r$\n2. Restart the installer$\r$\n3. Or install dependencies manually after installation"
     ${EndIf}
 FunctionEnd
 
