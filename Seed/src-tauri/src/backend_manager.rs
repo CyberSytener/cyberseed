@@ -138,6 +138,14 @@ impl BackendManager {
         Ok(process_guard.is_some())
     }
 
+    /// Minimum required Python version
+    const MIN_PYTHON_MAJOR: u32 = 3;
+    const MIN_PYTHON_MINOR: u32 = 11;
+
+    /// Supported Python minor versions for explicit version commands
+    /// Update this array when new Python versions are released
+    const SUPPORTED_PYTHON_MINORS: [u32; 3] = [11, 12, 13];
+
     /// Auto-detect Python executable (embedded vs system)
     fn detect_python(&self) -> String {
         // Determine platform-specific Python executable name
@@ -151,34 +159,39 @@ impl BackendManager {
         if let Some(embedded) = self.find_embedded_python(python_exe) {
             // Verify embedded Python works and meets version requirements
             if let Some(info) = Self::get_python_info(&embedded) {
-                if info.major == 3 && info.minor >= 11 {
+                if info.major == Self::MIN_PYTHON_MAJOR && info.minor >= Self::MIN_PYTHON_MINOR {
                     return embedded;
                 }
             }
         }
 
-        // Try to find Python 3.11+ in system PATH
-        // On Windows, also check common Python installation paths
-        let mut candidates: Vec<&str> = vec![
-            "python3.11",
-            "python3.12",
-            "python3.13",
-            "python3",
-            "python",
-        ];
+        // Build list of Python command candidates dynamically
+        let mut candidates: Vec<String> = Vec::new();
 
-        // On Windows, try py launcher with version specifiers
-        #[cfg(windows)]
-        {
-            candidates.insert(0, "py -3.13");
-            candidates.insert(0, "py -3.12");
-            candidates.insert(0, "py -3.11");
+        // Add specific version commands (python3.11, python3.12, etc.)
+        for minor in Self::SUPPORTED_PYTHON_MINORS.iter().rev() {
+            candidates.push(format!("python3.{}", minor));
         }
 
-        for cmd in candidates {
+        // Add generic commands
+        candidates.push("python3".to_string());
+        candidates.push("python".to_string());
+
+        // On Windows, try py launcher with version specifiers (prepend for priority)
+        #[cfg(windows)]
+        {
+            let mut py_candidates: Vec<String> = Vec::new();
+            for minor in Self::SUPPORTED_PYTHON_MINORS.iter().rev() {
+                py_candidates.push(format!("py -3.{}", minor));
+            }
+            py_candidates.append(&mut candidates);
+            candidates = py_candidates;
+        }
+
+        for cmd in &candidates {
             if let Some(info) = Self::get_python_info(cmd) {
-                if info.major == 3 && info.minor >= 11 {
-                    return cmd.to_string();
+                if info.major == Self::MIN_PYTHON_MAJOR && info.minor >= Self::MIN_PYTHON_MINOR {
+                    return cmd.clone();
                 }
             }
         }
@@ -294,7 +307,9 @@ impl BackendManager {
     /// Check if Python version string indicates 3.11 or higher
     fn is_python_311_or_higher(version_str: &str) -> bool {
         Self::parse_python_version(version_str, "")
-            .map(|info| info.major == 3 && info.minor >= 11)
+            .map(|info| {
+                info.major == Self::MIN_PYTHON_MAJOR && info.minor >= Self::MIN_PYTHON_MINOR
+            })
             .unwrap_or(false)
     }
 
@@ -304,12 +319,14 @@ impl BackendManager {
 
         match Self::get_python_info(&python_cmd) {
             Some(info) => {
-                if info.major == 3 && info.minor >= 11 {
+                if info.major == Self::MIN_PYTHON_MAJOR && info.minor >= Self::MIN_PYTHON_MINOR {
                     Ok(true)
                 } else {
                     Err(format!(
-                        "Python version {} found, but version 3.11 or higher is required",
-                        info.version
+                        "Python version {} found, but version {}.{} or higher is required",
+                        info.version,
+                        Self::MIN_PYTHON_MAJOR,
+                        Self::MIN_PYTHON_MINOR
                     ))
                 }
             }
@@ -326,10 +343,12 @@ impl BackendManager {
         python_path: Option<String>,
     ) -> Result<serde_json::Value, String> {
         let python_cmd = python_path.unwrap_or_else(|| self.detect_python());
+        let required_version = format!("{}.{}+", Self::MIN_PYTHON_MAJOR, Self::MIN_PYTHON_MINOR);
 
         match Self::get_python_info(&python_cmd) {
             Some(info) => {
-                let meets_requirements = info.major == 3 && info.minor >= 11;
+                let meets_requirements =
+                    info.major == Self::MIN_PYTHON_MAJOR && info.minor >= Self::MIN_PYTHON_MINOR;
                 Ok(serde_json::json!({
                     "path": info.path,
                     "version": info.version,
@@ -337,14 +356,14 @@ impl BackendManager {
                     "minor": info.minor,
                     "patch": info.patch,
                     "meets_requirements": meets_requirements,
-                    "required_version": "3.11+"
+                    "required_version": required_version
                 }))
             }
             None => Ok(serde_json::json!({
                 "error": format!("Could not detect Python at: {}", python_cmd),
                 "path": python_cmd,
                 "meets_requirements": false,
-                "required_version": "3.11+"
+                "required_version": required_version
             })),
         }
     }

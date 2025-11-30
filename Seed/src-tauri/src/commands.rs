@@ -37,18 +37,21 @@ pub async fn check_dependencies(
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
-    let requirements_installed = if python_available {
-        manager
-            .check_requirements(python_path, req_path)
-            .unwrap_or(false)
+    // Check requirements and capture error message if any
+    let (requirements_installed, requirements_error) = if python_available {
+        match manager.check_requirements(python_path, req_path) {
+            Ok(installed) => (installed, None),
+            Err(e) => (false, Some(e)),
+        }
     } else {
-        false
+        (false, None)
     };
 
     Ok(serde_json::json!({
         "python_available": python_available,
         "python_details": python_details,
         "requirements_installed": requirements_installed,
+        "requirements_error": requirements_error,
     }))
 }
 
